@@ -55,7 +55,7 @@ void flush_(bool f)
 
 /*
   Give a reward for 'amount' ms. If this was requested by Serial, send a confirmation once the reward is finished
- */
+*/
 void reward(int amount, bool serial)
 {
   if(flushing)
@@ -63,7 +63,9 @@ void reward(int amount, bool serial)
     
   digitalWrite(ACTIVESIGNAL, HIGH);
   digitalWrite(REWARDLED, HIGH);
+  
   delay(amount);
+  
   digitalWrite(ACTIVESIGNAL, LOW);
   digitalWrite(REWARDLED, LOW);
 
@@ -81,6 +83,12 @@ void processCommand(char c, int v)
     flush_(false);
 }
 
+/*
+  Serial commands are 6 bytes long with a leading character, followed by a space, then a 4 digit integer between 0000 - 9999.
+  A command of "1 1000" would mean to give a 1000ms reward.
+  A command of "2 0000" would mean to start a flush.
+  A command of "3 0000" would mean to stop a flush.
+*/
 void serial_check()
 {
   if(Serial.available() >= 6)
@@ -137,7 +145,7 @@ void dial_check()
   x = digitalRead(ROTARY3);
   y = digitalRead(ROTARY2);
 
-  //Increment reward amount when dial is turned
+  //Increment manual reward amount when dial is turned
   if(x < y && dial_set)
   {
     default_reward += default_increment * (default_reward < 10000);
@@ -185,6 +193,7 @@ void setup()
   Serial.begin(9600);
   Serial.print(0);
   
+  //Set the hardware pinmodes
   pinMode(ACTIVESIGNAL, OUTPUT);
   pinMode(REWARDLED, OUTPUT);
   pinMode(POWERLED, OUTPUT);
@@ -198,7 +207,7 @@ void setup()
   pinMode(ROTARY2, INPUT);
   pinMode(ROTARY1, INPUT);
 
-  //Set the Button Pins
+  //Set the button pins high
   digitalWrite(POWERBUTTON, HIGH);
   digitalWrite(FLUSHBUTTON, HIGH);
   digitalWrite(REWARDBUTTON, HIGH);
