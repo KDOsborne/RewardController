@@ -19,8 +19,6 @@
 #define REWARDBUTTON 31
 #define POWERLED 32
 #define REWARDLED 33
-//#define ROTARY5 44
-//#define ROTARY4 46
 #define ROTARY3 48
 #define ROTARY2 50
 #define ROTARY1 52
@@ -196,11 +194,6 @@ void setup()
   pinMode(FLUSHBUTTON, INPUT);
   pinMode(REWARDBUTTON, INPUT);
   
-  //pinMode(GATESIGNAL, INPUT);
-  //pinMode(TRIGGERSIGNAL, INPUT);
-  
-  //pinMode(ROTARY5, OUTPUT);
-  //pinMode(ROTARY4, OUTPUT);
   pinMode(ROTARY3, INPUT);
   pinMode(ROTARY2, INPUT);
   pinMode(ROTARY1, INPUT);
