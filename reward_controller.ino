@@ -1,3 +1,7 @@
+/*
+  To connect with Picto (as of 07/16/2021), set the COM port of the Arduino to 3 once it's connected in Windows device manager.
+*/
+
 #include <Wire.h>
 #include <Adafruit_RGBLCDShield.h>
 #include <utility/Adafruit_MCP23017.h>
