@@ -21,8 +21,8 @@
 #define REWARDJACK 29
 #define FLUSHBUTTON 30
 #define REWARDBUTTON 31
-#define POWERLED 32
-#define REWARDLED 33
+#define REWARDLED 32
+#define POWERLED 33
 #define ROTARY3 48
 #define ROTARY2 50
 #define ROTARY1 52
