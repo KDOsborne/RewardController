@@ -1,7 +1,3 @@
-/*
-  To connect with Picto (as of 07/16/2021), set the COM port of the Arduino to 3 once it's connected in Windows device manager.
-*/
-
 #include <Wire.h>
 #include <Adafruit_RGBLCDShield.h>
 #include <utility/Adafruit_MCP23017.h>
@@ -27,33 +23,46 @@
 #define ROTARY2 50
 #define ROTARY1 52
 
-#define GATESIGNAL 6
-#define TRIGGERSIGNAL 7
+#define GATESIGNAL 35
+#define TRIGGERSIGNAL 37
+
+#define FLUSHDURATION 600000 //600000 ms = 10 minutes
 
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 
 const uint8_t rs = 53, rw = 51, en = 49, d4 = 47, d5 = 45, d6 = 43, d7 = 41;
 
 int default_reward = 50, default_increment = 50, ACTIVESIGNAL = SIGNAL12V, x, y;
-char command, buf[5];
+unsigned long flush_time = 0;
 bool flushing = false, dial_set = false, reset_ = false;
 
+void (*reset) (void) = 0;
+
+void reset_lcd(bool clear)
+{
+	if(clear)
+		lcd.clear();
+	lcd.print(F("Reward Amount:"));
+	lcd.setCursor(0,1);
+	lcd.print(default_reward);
+	lcd.print(F("    "));
+}
 void flush_(bool f)
 {
   digitalWrite(ACTIVESIGNAL, f);
   digitalWrite(REWARDLED, f);
   flushing = f;
-
+  
   lcd.clear();
   
   if(f)
+  {
+    flush_time = millis();
     lcd.print(F("Flushing..."));
+  }
   else
   {
-    lcd.print(F("Reward Amount:"));
-    lcd.setCursor(0,1);
-    lcd.print(default_reward);
-    lcd.print(F("    "));
+    reset_lcd(false);
   }
 }
 
@@ -72,40 +81,27 @@ void reward(int amount, bool serial)
   
   digitalWrite(ACTIVESIGNAL, LOW);
   digitalWrite(REWARDLED, LOW);
-
-  if(serial)
-    Serial.print(1);
 }
 
-void processCommand(char c, int v)
+void bnc_check()
 {
-  if(c == '1')
-    reward(v, true);
-  else if(c == '2')
-    flush_(true);
-  else if(c == '3')
-    flush_(false);
-}
-
-/*
-  Serial commands are 6 bytes long with a leading character, followed by a space, then a 4 digit integer between 0000 - 9999.
-  A command of "1 1000" would mean to give a 1000ms reward.
-  A command of "2 0000" would mean to start a flush.
-  A command of "3 0000" would mean to stop a flush.
-*/
-void serial_check()
-{
-  if(Serial.available() >= 6)
-  {  
-    Serial.readBytes(&command, 1);
-    Serial.read();
-    Serial.readBytes(buf, 4);
+	if(digitalRead(GATESIGNAL))
+	{
+		digitalWrite(ACTIVESIGNAL, HIGH);
+		digitalWrite(REWARDLED, HIGH);
     
-    buf[4] = '\0';
-    processCommand(command, atoi(buf));
-  }
+		lcd.clear();
+		lcd.print(F("Rewarding..."));
+		
+		while(digitalRead(GATESIGNAL))
+		{
+			delay(1);
+		}
+		digitalWrite(ACTIVESIGNAL, LOW);
+    digitalWrite(REWARDLED, LOW);
+		reset_lcd(true);
+	}
 }
-
 void button_check()
 {
   //Check if button has been pressed
@@ -136,11 +132,14 @@ void button_check()
   }
   else if(!digitalRead(POWERBUTTON))
   {
+    lcd.clear();
+    lcd.print(F("Release to reset..."));
+    
     while(!digitalRead(POWERBUTTON))
     {
       delay(100);
     }
-    reset_ = true;
+    reset();
   }
 }
 
@@ -172,13 +171,23 @@ void dial_check()
   }
 }
 
+void flush_check()
+{
+  if(flushing)
+  {
+    if((millis() - flush_time >= FLUSHDURATION) || (millis() < flush_time))
+      flush_(false);
+  }
+}
+
 void rewardLoop()
 {
   while(!reset_)
   {
-    serial_check();
+	  bnc_check();
     button_check();
     dial_check();
+    flush_check();
   }
 }
 
@@ -192,16 +201,14 @@ void setup()
   lcd.print(F("Reward Amount:"));
   lcd.setCursor(0,1);
   lcd.print(default_reward);
-
-  //Initialize Serial
-  Serial.begin(9600);
-  Serial.print(0);
   
   //Set the hardware pinmodes
   pinMode(ACTIVESIGNAL, OUTPUT);
   pinMode(REWARDLED, OUTPUT);
   pinMode(POWERLED, OUTPUT);
-
+  pinMode(GATESIGNAL, INPUT);
+  //pinMode(TRIGGERSIGNAL, OUTPUT);
+  
   pinMode(POWERBUTTON, INPUT);
   pinMode(REWARDJACK, INPUT);
   pinMode(FLUSHBUTTON, INPUT);
@@ -228,8 +235,5 @@ void loop()
   //Reset the LCD screen in case it became unsynced
   lcd.begin(16,2);
   lcd.setCursor(0,0);
-  lcd.print(F("Reward Amount:"));
-  lcd.setCursor(0,1);
-  lcd.print(default_reward);
-  lcd.print(F("    "));
+  reset_lcd(false);
 }
